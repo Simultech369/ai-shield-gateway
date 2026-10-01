@@ -1,0 +1,140 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "AI Shield Gateway API",
+    "description": "Zero-Leak PII Surrogate Shield & Cryptographic Grounding Verifier for AI Agents and LLM Applications.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Simultech AI Security",
+      "url": "https://github.com/Simultech369"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://api.simultech.io",
+      "description": "Production API Server"
+    },
+    {
+      "url": "http://localhost:3000",
+      "description": "Local Development Server"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health Probe",
+        "description": "Returns API service health, uptime, and version.",
+        "responses": {
+          "200": {
+            "description": "Service is healthy"
+          }
+        }
+      }
+    },
+    "/v1/mask": {
+      "post": {
+        "summary": "Mask PII & Secrets",
+        "description": "Bijectively masks emails, API keys, private keys, ETH/Solana addresses, IP addresses, and paths with deterministic surrogates.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "example": "Contact me at alice@company.com with private key sk-abcdef12345678901234."
+                  },
+                  "messages": {
+                    "type": "array",
+                    "items": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sanitized text with cryptographic receipt and encrypted recovery token"
+          },
+          "402": {
+            "description": "Payment Required via RapidAPI subscription or x402 Base USDC"
+          }
+        }
+      }
+    },
+    "/v1/unmask": {
+      "post": {
+        "summary": "Unmask Completion",
+        "description": "Re-hydrates original PII entities into LLM completion output using the recovery token.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["text", "recovery_token"],
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "example": "Sending email to {{SURROGATE_EMAIL_1}}."
+                  },
+                  "recovery_token": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Re-hydrated plaintext"
+          },
+          "400": {
+            "description": "Invalid recovery token"
+          }
+        }
+      }
+    },
+    "/v1/verify-citations": {
+      "post": {
+        "summary": "Verify Citations",
+        "description": "Cryptographically verifies cited quotes against local corpus files or context packets, preventing RAG hallucinations.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "claim_id": {
+                    "type": "string"
+                  },
+                  "citations": {
+                    "type": "array",
+                    "items": {
+                      "type": "object"
+                    }
+                  },
+                  "context_packets": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Grounding verification receipt with SHA-256 evidence"
+          }
+        }
+      }
+    }
+  }
+}

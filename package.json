@@ -1,0 +1,30 @@
+{
+  "name": "ai-shield-api",
+  "version": "1.0.0",
+  "description": "Zero-Leak PII Surrogate Shield & Cryptographic Grounding Verifier with RapidAPI and x402 Base USDC Paywall",
+  "main": "src/server.mjs",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.mjs",
+    "dev": "node --watch src/server.mjs",
+    "test": "node test/api.test.mjs"
+  },
+  "keywords": [
+    "pii",
+    "privacy",
+    "llm",
+    "rag",
+    "grounding",
+    "x402",
+    "rapidapi",
+    "base",
+    "usdc"
+  ],
+  "author": "Simultech",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2"
+  }
+}
