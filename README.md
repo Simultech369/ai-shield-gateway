@@ -1,23 +1,32 @@
 # AI Shield Gateway API
 
-**Zero-Leak PII Surrogate Shield & Cryptographic Grounding Verifier with Dual-Rail Monetization (RapidAPI + x402 on Base).**
+**Zero-Leak PII Surrogate Shield, Drop-In OpenAI Privacy Proxy, AI Agent Web Extractor & Cryptographic Grounding Verifier with Dual-Rail Monetization (RapidAPI + x402 on Base).**
 
 ---
 
 ## 🚀 Overview
 
-The **AI Shield Gateway** is an automated privacy, security, and verification proxy designed for AI applications, RAG pipelines, and autonomous AI agents:
+The **AI Shield Gateway** is an automated privacy, security, and verification infrastructure service designed for LLM applications, RAG pipelines, and autonomous AI agents:
 
-1. **Reversible PII & Secret Shield (`POST /v1/mask` & `POST /v1/unmask`):**
-   - Bijectively maps sensitive data (emails, API keys, private keys, ETH/crypto addresses, IP addresses, local filesystem paths) to deterministic surrogates (`{{SURROGATE_EMAIL_1}}`, etc.).
-   - Preserves co-reference across multi-turn chat messages.
-   - Emits an encrypted recovery token and cryptographic SHA-256 evidence receipt with zero raw PII egress.
-   - Re-hydrates original values seamlessly in LLM completions.
+1. **Drop-In OpenAI Privacy Proxy (`POST /v1/chat/completions` & `POST /v1/proxy`):**
+   - Seamless drop-in replacement for OpenAI endpoints. Set `base_url="https://ai-shield-gateway.up.railway.app/v1"`.
+   - Intercepts requests, bijectively masks emails, API keys, private keys, ETH/crypto addresses, IP addresses, and filesystem paths before egress to OpenAI/Groq/Anthropic.
+   - Forwards sanitized payload to upstream model provider (OpenAI never sees your raw PII or secrets).
+   - Re-hydrates completions on ingress and attaches cryptographic SHA-256 evidence receipts.
 
-2. **Cryptographic Citation & Grounding Verifier (`POST /v1/verify-citations`):**
-   - Verifies whether an LLM's cited quotes actually exist in source documents.
-   - Distinguishes exact matches, normalized matches, line drift, and phantom hallucinations.
-   - Emits tamper-evident SHA-256 grounding receipts.
+2. **Web-to-Markdown AI Agent Extractor (`POST /v1/extract`):**
+   - High-speed web scraper specifically formatted for AI agents and LLMs.
+   - Strips boilerplate, navigation, ads, footers, and scripts.
+   - Emits clean, token-efficient semantic Markdown with headings, code blocks, links, tables, and structured metadata.
+   - Built-in SSRF protection blocking private IP ranges and internal network attacks.
+
+3. **Reversible PII Shield (`POST /v1/mask` & `POST /v1/unmask`):**
+   - Bijective surrogate masking (`{{SURROGATE_EMAIL_1}}`, etc.) with co-reference preservation.
+   - Generates AES-256 encrypted recovery tokens for offline or custom pipeline unmasking.
+
+4. **Cryptographic Citation Grounding Verifier (`POST /v1/verify-citations`):**
+   - Verifies whether LLM citations exist verbatim in source corpus documents.
+   - Catches phantom hallucinations and emits tamper-evident SHA-256 evidence receipts.
 
 ---
 
@@ -60,48 +69,46 @@ The API operates two parallel payment rails so you capture revenue from both Web
 
 ---
 
-## ⚡ Quickstart Client Snippets
+## ⚡ 1-Line Drop-In OpenAI SDK Usage
 
-### Python (Securing an OpenAI / Anthropic Call)
+### Python (Drop-In OpenAI Client)
+```python
+from openai import OpenAI
+import os
+
+# Point official OpenAI client to AI Shield Gateway
+client = OpenAI(
+    base_url="https://ai-shield-gateway.up.railway.app/v1",
+    api_key=os.environ["OPENAI_API_KEY"],
+    default_headers={
+        "X-RapidAPI-Proxy-Secret": os.environ["RAPIDAPI_PROXY_SECRET"],
+    },
+)
+
+# Call completions as normal - all PII is automatically masked on egress and unmasked on return!
+response = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[
+        {"role": "system", "content": "You are a customer assistant."},
+        {"role": "user", "content": "Send refund for alice@acme.org to 0x1111111111111111111111111111111111111111."}
+    ],
+)
+
+print(response.choices[0].message.content)
+```
+
+### Python (Web-to-Markdown AI Agent Scraper)
 ```python
 import requests
 
-SHIELD_URL = "http://localhost:3000"
-HEADERS = {"X-RapidAPI-Proxy-Secret": "YOUR_SECRET"}  # or X-Payment-Tx
+res = requests.post(
+    "https://ai-shield-gateway.up.railway.app/v1/extract",
+    json={"url": "https://news.ycombinator.com"},
+    headers={"X-RapidAPI-Proxy-Secret": "YOUR_SECRET"},
+).json()
 
-# 1. Mask prompt before sending to LLM
-prompt = "Send report for user alice@acme.com with key sk-12345678901234567890."
-mask_res = requests.post(f"{SHIELD_URL}/v1/mask", json={"text": prompt}, headers=HEADERS).json()
-
-safe_text = mask_res["masked_text"]
-token = mask_res["recovery_token"]
-# safe_text is: "Send report for user {{SURROGATE_EMAIL_1}} with key {{SURROGATE_SECRET_KEY_1}}."
-
-# 2. Call OpenAI with sanitized prompt (OpenAI never sees your PII)
-# llm_response = openai.ChatCompletion.create(messages=[{"role": "user", "content": safe_text}])
-llm_output = "Processed request for {{SURROGATE_EMAIL_1}} successfully."
-
-# 3. Unmask completion to restore original entities
-unmask_res = requests.post(f"{SHIELD_URL}/v1/unmask", json={"text": llm_output, "recovery_token": token}, headers=HEADERS).json()
-print(unmask_res["unmasked_text"])
-# Output: "Processed request for alice@acme.com successfully."
-```
-
-### JavaScript / Node.js
-```javascript
-const res = await fetch("https://your-api.railway.app/v1/mask", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "X-RapidAPI-Proxy-Secret": process.env.RAPIDAPI_PROXY_SECRET,
-  },
-  body: JSON.stringify({
-    text: "Transfer 50 USDC to 0x1111111111111111111111111111111111111111.",
-  }),
-});
-const data = await res.json();
-console.log(data.masked_text);
-// "Transfer 50 USDC to {{SURROGATE_ETH_ADDRESS_1}}."
+print(res["title"])
+print(res["markdown"]) # Clean markdown, boilerplate stripped, agent-ready!
 ```
 
 ---
@@ -121,4 +128,4 @@ console.log(data.masked_text);
 ## 🌐 Publish to RapidAPI Hub (3 Steps)
 1. Go to [RapidAPI Studio](https://rapidapi.com/studio).
 2. Click **Create New API** -> **Import from OpenAPI Spec**.
-3. Upload [`openapi.json`](./openapi.json), set your upstream URL (e.g. `https://your-app.railway.app`), configure your pricing tiers ($0 free tier with 50 calls, $19 Pro tier with 2,500 calls), and hit **Publish**!
+3. Upload [`openapi.json`](./openapi.json), set your upstream URL (e.g. `https://ai-shield-gateway.up.railway.app`), configure your pricing tiers ($0 free tier with 50 calls, $19 Pro tier with 2,500 calls), and hit **Publish**!

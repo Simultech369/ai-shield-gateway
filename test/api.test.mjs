@@ -43,6 +43,7 @@ async function runTests() {
       const res = await request("GET", "/health");
       assert.equal(res.status, 200);
       assert.equal(res.data.status, "ok");
+      assert.equal(res.data.service, "ai-shield-gateway");
       console.log("✔ GET /health returns 200 OK");
     }
 
@@ -166,7 +167,80 @@ async function runTests() {
       console.log("✔ POST /v1/verify-citations returns verified grounding receipt");
     }
 
-    console.log("\nALL 6/6 API TEST SUITES PASSED CLEANLY!");
+    // 7. POST /v1/chat/completions (OpenAI Drop-In Privacy Proxy)
+    {
+      const res = await request(
+        "POST",
+        "/v1/chat/completions",
+        {
+          model: "gpt-4o",
+          messages: [
+            { role: "system", content: "You are a helpful assistant." },
+            { role: "user", content: "My email is alice@cybercorp.com and my server is 10.0.0.4. What should I configure?" },
+          ],
+          mock_completion: "Your server {{SURROGATE_IP_ADDRESS_1}} is configured. Notification sent to {{SURROGATE_EMAIL_1}}.",
+        },
+        {
+          "x-rapidapi-proxy-secret": "test_rapidapi_secret_123",
+        }
+      );
+
+      assert.equal(res.status, 200);
+      assert.equal(res.data.object, "chat.completion");
+      assert(res.data.choices && res.data.choices.length > 0);
+      const content = res.data.choices[0].message.content;
+
+      // Assert complete re-hydration of original values into the assistant response
+      assert(content.includes("10.0.0.4"), `Expected 10.0.0.4 in content, got: ${content}`);
+      assert(content.includes("alice@cybercorp.com"), `Expected alice@cybercorp.com in content, got: ${content}`);
+      assert(!content.includes("{{SURROGATE_"), "Surrogate tokens must not leak in final unmasked response");
+
+      // Assert cryptographic receipt & headers
+      assert.equal(res.data.pii_shield.entities_masked, 2);
+      assert(res.data.pii_shield.receipt.evidence_sha256);
+      assert.equal(res.headers["x-pii-shield-entities-masked"], "2");
+      console.log("✔ POST /v1/chat/completions masks on egress and re-hydrates on ingress with sealed receipt");
+    }
+
+    // 8. POST /v1/proxy (Alias endpoint)
+    {
+      const res = await request(
+        "POST",
+        "/v1/proxy",
+        {
+          prompt: "Verify transfer to 0x2222222222222222222222222222222222222222",
+          mock_completion: "Transfer confirmed to {{SURROGATE_ETH_ADDRESS_1}}.",
+        },
+        {
+          "x-payment-tx": "0xtest_valid_sample_hash_9877",
+        }
+      );
+
+      assert.equal(res.status, 200);
+      assert(res.data.choices[0].message.content.includes("0x2222222222222222222222222222222222222222"));
+      console.log("✔ POST /v1/proxy functions seamlessly as an alias over x402 Base payment rail");
+    }
+
+    // 9. POST /v1/extract (SSRF protection test)
+    {
+      const res = await request(
+        "POST",
+        "/v1/extract",
+        {
+          url: "http://127.0.0.1:8080/internal-metrics",
+        },
+        {
+          "x-rapidapi-proxy-secret": "test_rapidapi_secret_123",
+        }
+      );
+
+      assert.equal(res.status, 403);
+      assert.equal(res.data.success, false);
+      assert(res.data.error.includes("SSRF Blocked"));
+      console.log("✔ POST /v1/extract enforces strict SSRF blocking on private IP ranges");
+    }
+
+    console.log("\nALL 9/9 API TEST SUITES PASSED CLEANLY!");
   } finally {
     server.close();
   }

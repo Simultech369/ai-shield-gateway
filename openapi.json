@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "AI Shield Gateway API",
-    "description": "Zero-Leak PII Surrogate Shield & Cryptographic Grounding Verifier for AI Agents and LLM Applications.",
-    "version": "1.0.0",
+    "description": "Zero-Leak PII Surrogate Shield, Drop-In OpenAI Privacy Proxy, Web Extractor & Cryptographic Grounding Verifier.",
+    "version": "1.1.0",
     "contact": {
       "name": "Simultech AI Security",
       "url": "https://github.com/Simultech369"
@@ -11,8 +11,8 @@
   },
   "servers": [
     {
-      "url": "https://api.simultech.io",
-      "description": "Production API Server"
+      "url": "https://ai-shield-gateway.up.railway.app",
+      "description": "Production Cloud Deployment"
     },
     {
       "url": "http://localhost:3000",
@@ -31,10 +31,70 @@
         }
       }
     },
+    "/v1/chat/completions": {
+      "post": {
+        "summary": "OpenAI Drop-In Privacy Proxy",
+        "description": "Drop-in OpenAI proxy. Automatically sanitizes outbound messages by bijectively masking PII/secrets, forwards to upstream LLM, and unmasks response seamlessly before returning.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["messages"],
+                "properties": {
+                  "model": {
+                    "type": "string",
+                    "example": "gpt-4o"
+                  },
+                  "messages": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "role": { "type": "string", "example": "user" },
+                        "content": { "type": "string", "example": "Send payment to 0x1111111111111111111111111111111111111111 and email bob@acme.org" }
+                      }
+                    }
+                  },
+                  "temperature": {
+                    "type": "number",
+                    "example": 0.7
+                  },
+                  "provider": {
+                    "type": "string",
+                    "example": "openai"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Standard OpenAI chat completion response with unmasked content and cryptographic PII audit receipt"
+          },
+          "402": {
+            "description": "Payment Required via RapidAPI or Base USDC x402 protocol"
+          }
+        }
+      }
+    },
+    "/v1/proxy": {
+      "post": {
+        "summary": "LLM Privacy Proxy Alias",
+        "description": "Flexible alias for /v1/chat/completions supporting prompt strings or messages arrays across OpenAI, Groq, and Ollama.",
+        "responses": {
+          "200": {
+            "description": "Unmasked completion with receipt"
+          }
+        }
+      }
+    },
     "/v1/mask": {
       "post": {
         "summary": "Mask PII & Secrets",
-        "description": "Bijectively masks emails, API keys, private keys, ETH/Solana addresses, IP addresses, and paths with deterministic surrogates.",
+        "description": "Bijectively masks emails, API keys, private keys, ETH/crypto addresses, IP addresses, and paths with deterministic surrogates.",
         "requestBody": {
           "required": true,
           "content": {
@@ -97,6 +157,44 @@
           },
           "400": {
             "description": "Invalid recovery token"
+          }
+        }
+      }
+    },
+    "/v1/extract": {
+      "post": {
+        "summary": "Web-to-Markdown AI Agent Extractor",
+        "description": "Scrapes a public URL, strips ads, navs, and boilerplate, and outputs clean, token-efficient Markdown with structured metadata and SSRF protection.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["url"],
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "example": "https://news.ycombinator.com"
+                  },
+                  "options": {
+                    "type": "object",
+                    "properties": {
+                      "max_chars": { "type": "number", "example": 50000 },
+                      "include_images": { "type": "boolean", "example": false }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Extracted Markdown and metadata with SHA-256 hash"
+          },
+          "403": {
+            "description": "SSRF Blocked: Internal or dangerous host"
           }
         }
       }
