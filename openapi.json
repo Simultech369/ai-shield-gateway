@@ -233,6 +233,43 @@
           }
         }
       }
+    },
+    "/v1/scan-contract": {
+      "post": {
+        "summary": "Solidity Invariant & Security Linter",
+        "description": "Performs static security analysis on Solidity smart contracts, detecting tx.origin vulnerabilities, reentrancy vectors, precision loss, unchecked transfers, and dangerous opcodes with cryptographic receipts.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["code"],
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "example": "pragma solidity ^0.8.20;\ncontract Vault { function withdraw() public { selfdestruct(payable(msg.sender)); } }"
+                  },
+                  "options": {
+                    "type": "object",
+                    "properties": {
+                      "strict": { "type": "boolean", "example": true }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Security evaluation with list of flagged issues, security score (0-100), posture verdict, and signed SHA-256 receipt"
+          },
+          "400": {
+            "description": "Missing code string"
+          }
+        }
+      }
     }
   }
 }

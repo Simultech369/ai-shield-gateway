@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node src/server.mjs",
     "dev": "node --watch src/server.mjs",
-    "test": "node test/web_extractor.test.mjs && node test/api.test.mjs"
+    "test": "node test/web_extractor.test.mjs && node test/solidity_scanner.test.mjs && node test/api.test.mjs"
   },
   "keywords": [
     "pii",

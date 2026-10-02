@@ -240,7 +240,39 @@ async function runTests() {
       console.log("✔ POST /v1/extract enforces strict SSRF blocking on private IP ranges");
     }
 
-    console.log("\nALL 9/9 API TEST SUITES PASSED CLEANLY!");
+    // 10. POST /v1/scan-contract (Solidity Invariant Linter)
+    {
+      const vulnerableSolidity = `
+        pragma solidity ^0.8.20;
+        contract Vulnerable {
+          function kill() public {
+            require(tx.origin == msg.sender);
+            selfdestruct(payable(msg.sender));
+          }
+        }
+      `;
+
+      const res = await request(
+        "POST",
+        "/v1/scan-contract",
+        {
+          code: vulnerableSolidity,
+        },
+        {
+          "x-rapidapi-proxy-secret": "test_rapidapi_secret_123",
+        }
+      );
+
+      assert.equal(res.status, 200);
+      assert.equal(res.data.success, true);
+      assert.equal(res.data.posture, "FAIL_HIGH_RISK");
+      assert(res.data.issues.length >= 2);
+      assert(res.data.receipt);
+      assert(res.data.receipt.evidence_sha256);
+      console.log("✔ POST /v1/scan-contract analyzes Solidity code, detects flaws and returns signed receipt");
+    }
+
+    console.log("\nALL 10/10 API TEST SUITES PASSED CLEANLY!");
   } finally {
     server.close();
   }

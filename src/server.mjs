@@ -4,6 +4,7 @@ import crypto from "node:crypto";
 import { PiiSafeInferenceProxy, verifyPiiInferenceProxyReceipt } from "./engine/pii_safe_inference_proxy.mjs";
 import { CitationGroundingVerifier } from "./engine/citation_grounding_verifier.mjs";
 import { extractUrlToMarkdown } from "./engine/web_extractor.mjs";
+import { scanSolidityCode } from "./engine/solidity_scanner.mjs";
 import { createPaywallMiddleware } from "./middleware/paywall.mjs";
 
 const app = express();
@@ -310,6 +311,22 @@ app.post("/v1/verify-citations", (req, res) => {
     success: true,
     result,
   });
+});
+
+// 8. POST /v1/scan-contract - Solidity Invariant & Security Linter
+app.post("/v1/scan-contract", (req, res) => {
+  const { code, options } = req.body;
+
+  if (!code || typeof code !== "string") {
+    return res.status(400).json({ error: "Missing required 'code' parameter string containing Solidity code." });
+  }
+
+  try {
+    const result = scanSolidityCode(code, options || {});
+    return res.json(result);
+  } catch (err) {
+    return res.status(400).json({ success: false, error: err.message });
+  }
 });
 
 // Start Server
