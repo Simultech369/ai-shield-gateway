@@ -1,8 +1,8 @@
 # AI Shield Gateway API
 
 [![CI](https://github.com/Simultech369/ai-shield-gateway/actions/workflows/ci.yml/badge.svg)](https://github.com/Simultech369/ai-shield-gateway/actions/workflows/ci.yml)
-[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/new?template=https%3A%2F%2Fgithub.com%2FSimultech369%2Fai-shield-gateway)
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Simultech369/ai-shield-gateway)
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new)
 
 **Zero-Leak PII Surrogate Shield, Drop-In OpenAI Privacy Proxy, AI Agent Web Extractor & Cryptographic Grounding Verifier with Dual-Rail Monetization (RapidAPI + x402 on Base).**
 
